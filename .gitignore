@@ -1,0 +1,27 @@
+# 逆コンパイル結果はリポジトリ外に保存する。以下は誤配置への補助対策。
+[Dd]ecompiled/
+[Dd]ecompilation/
+[Rr]eference/
+[Ii][Ll][Ss]py/
+
+# ゲーム由来のバイナリとビルド出力
+*.[Dd][Ll][Ll]
+*.[Pp][Dd][Bb]
+[Bb]in/
+[Oo]bj/
+[Dd]ist/
+
+# ローカル開発メモ（手元には保持する）
+/AGENTS.md
+/SPEC.md
+/RESEARCH.md
+
+# ローカル設定、ログ、バックアップ、IDEの作業データ
+.env
+.env.*
+*.cfg
+*.log
+*.bak
+*.user
+*.suo
+.vs/
