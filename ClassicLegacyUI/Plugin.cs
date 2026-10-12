@@ -12,7 +12,7 @@ using Renderite.Shared;
 
 namespace ClassicLegacyUI;
 
-[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.1", "markn2000", "")]
+[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.1", "markn2000", "https://github.com/MarkN2000/ClassicLegacyUI")]
 [BepInDependency(BepInExResoniteShim.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency(BepisResoniteWrapper.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 public sealed class Plugin : BasePlugin

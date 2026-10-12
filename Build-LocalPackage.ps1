@@ -1,4 +1,6 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿param([switch]$Thunderstore)
+
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
 $project = Join-Path $PSScriptRoot 'ClassicLegacyUI\ClassicLegacyUI.csproj'
@@ -9,15 +11,25 @@ $version = ([xml](Get-Content -LiteralPath $project -Raw)).Project.PropertyGroup
 $dll = Join-Path $PSScriptRoot 'ClassicLegacyUI\bin\Release\net10.0\ClassicLegacyUI.dll'
 $outputDir = Join-Path $PSScriptRoot 'dist'
 [IO.Directory]::CreateDirectory($outputDir) | Out-Null
-$output = Join-Path $outputDir "ClassicLegacyUI-$version-local.zip"
+$suffix = if ($Thunderstore) { '' } else { '-local' }
+$output = Join-Path $outputDir "ClassicLegacyUI-$version$suffix.zip"
 $temporary = "$output.tmp"
+$dependencies = @()
+if ($Thunderstore) {
+    $dependencies = @(
+        'ResoniteModding-BepisLoader-1.7.0'
+        'ResoniteModding-BepInExResoniteShim-0.9.3'
+        'ResoniteModding-BepisResoniteWrapper-1.0.2'
+        'ResoniteModding-BepisModSettings-1.6.6'
+    )
+}
 $manifest = [ordered]@{
     name = 'ClassicLegacyUI'
     author = 'markn2000'
     version_number = $version
     description = 'Brings a classic look to Legacy UI you create through Create New.'
-    website_url = ''
-    dependencies = @()
+    website_url = 'https://github.com/MarkN2000/ClassicLegacyUI'
+    dependencies = $dependencies
 } | ConvertTo-Json
 
 # 作成と検査が成功するまで、既存の完成済みZIPは置き換えない。
@@ -40,7 +52,10 @@ try {
         if (Compare-Object $expected @($zip.Entries.FullName)) { throw 'ZIP entries do not match the expected files.' }
         $reader = [IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())
         try { $metadata = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
-        if ($metadata.name -ne 'ClassicLegacyUI' -or $metadata.version_number -ne $version -or $metadata.dependencies.Count -ne 0) {
+        if ($metadata.name -cne 'ClassicLegacyUI' -or $metadata.author -cne 'markn2000' -or $metadata.version_number -ne $version -or
+            $metadata.website_url -cne 'https://github.com/MarkN2000/ClassicLegacyUI' -or
+            $metadata.description.Length -gt 250 -or $metadata.dependencies.Count -ne $dependencies.Count -or
+            (@($metadata.dependencies) -join ',') -cne ($dependencies -join ',')) {
             throw 'Manifest metadata does not match the expected values.'
         }
         $entryStream = $zip.GetEntry('plugins/ClassicLegacyUI.dll').Open()
