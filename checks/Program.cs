@@ -41,7 +41,8 @@ internal static class Program
         try
         {
             var config = new ConfigFile(file, false) { SaveOnConfigSet = false };
-            var styles = Plugin.ReadStyles(config, warnings.Add);
+            var settings = Plugin.RegisterSettings(config);
+            var styles = Plugin.ReadStyles(settings, warnings.Add);
             Check(styles.Count == 9 && warnings.Count == 0, "9種類の初期設定");
             Check(config.Values.Count(entry => entry.SettingType == typeof(bool)) == 10
                 && config.Values.Count(entry => entry.SettingType == typeof(colorX)) == 10
@@ -63,36 +64,43 @@ internal static class Program
             config.Save();
             string saved = File.ReadAllText(file);
             Check(saved.Contains("[1; 0.73; 0.09; 0.8; sRGB]"), "色の保存形式");
-            var roundTrip = Plugin.ReadStyles(new ConfigFile(file, false), warnings.Add);
+            var roundTrip = Plugin.ReadStyles(Plugin.RegisterSettings(new ConfigFile(file, false)), warnings.Add);
             Check(styles.All(pair => roundTrip[pair.Key].Equals(pair.Value)), "設定ファイルの往復");
 
             config["General", "Enabled"].BoxedValue = false;
-            Check(Plugin.ReadStyles(config, warnings.Add).Count == 0, "設定画面相当の全体無効化");
+            Check(Plugin.ReadStyles(settings, warnings.Add).Count == 0, "設定画面相当の全体無効化");
             config["General", "Enabled"].BoxedValue = true;
             config["Button", "Color"].BoxedValue = new colorX(0.1f, 0.2f, 0.3f, 1f, ColorProfile.Linear);
             config["Button", "Slant"].BoxedValue = -22.5f;
-            var changed = Plugin.ReadStyles(config, warnings.Add);
+            var changed = Plugin.ReadStyles(settings, warnings.Add);
             Check(changed[typeof(LegacyButton)].Color!.Value.Profile == ColorProfile.Linear
                 && changed[typeof(LegacyButton)].Slant == -22.5f, "設定画面相当の変更と再有効化");
             Check(styles[typeof(LegacyButton)].Slant == 22.5f, "取得済みの値に変更を遡及しない");
             Check(File.ReadAllText(file) == saved, "UI変更中に独自の毎回保存をしない");
 
+            // 登録元から外しても保持したConfigEntryを読み、再登録しないことを確認する。
+            config.Remove(new ConfigDefinition("Button", "Color"));
+            var retained = Plugin.ReadStyles(settings, warnings.Add);
+            Check(config.Count == 25 && retained[typeof(LegacyButton)] == changed[typeof(LegacyButton)],
+                "登録済み設定の参照を保持し、変更時に再登録しない");
+
             const string legacy = "[General]\n# Setting type: String\nEnabled = false\n[Button]\n# Setting type: String\nColor = [0.2; 0.4; 0.6; 0.5; sRGB]\nSlant = 12.5\n";
             File.WriteAllText(file, legacy);
             var migratedConfig = new ConfigFile(file, false);
-            Check(Plugin.ReadStyles(migratedConfig, warnings.Add).Count == 0, "旧文字列設定の無効状態を引き継ぐ");
+            var migratedSettings = Plugin.RegisterSettings(migratedConfig);
+            Check(Plugin.ReadStyles(migratedSettings, warnings.Add).Count == 0, "旧文字列設定の無効状態を引き継ぐ");
             migratedConfig["General", "Enabled"].BoxedValue = true;
-            var migrated = Plugin.ReadStyles(migratedConfig, warnings.Add);
+            var migrated = Plugin.ReadStyles(migratedSettings, warnings.Add);
             Check(migrated[typeof(LegacyButton)].Color == new colorX(0.2f, 0.4f, 0.6f, 0.5f)
                 && migrated[typeof(LegacyButton)].Slant == 12.5f, "旧文字列設定のカスタム値を引き継ぐ");
             File.WriteAllText(file, "[Button]\nSlant = 5\n");
             migratedConfig.Reload();
-            Check(Plugin.ReadStyles(migratedConfig, warnings.Add)[typeof(LegacyButton)].Slant == 5f, "標準の設定再読み込み");
+            Check(Plugin.ReadStyles(migratedSettings, warnings.Add)[typeof(LegacyButton)].Slant == 5f, "標準の設定再読み込み");
 
             const string invalid = "[Button]\nColor = malformed\nSlant = NaN\n[Panel]\nColor = [1; 2; 0; 0.8; sRGB]\n[Slider]\nSlant = 90\n[Checkbox]\nEnabled = false\n[Radio]\nEnabled = bad\n[ProgressBar]\nContainerColor = [1; 1; 1; 1; Linear]\n";
             File.WriteAllText(file, invalid);
             Plugin.BackupExistingConfig(file);
-            styles = Plugin.ReadStyles(new ConfigFile(file, false), warnings.Add);
+            styles = Plugin.ReadStyles(Plugin.RegisterSettings(new ConfigFile(file, false)), warnings.Add);
             Check(styles[typeof(LegacyButton)].Color == Plugin.CommonColor
                 && styles[typeof(LegacyButton)].Slant == -30f, "標準の構文不正時の既定値とNaN補正");
             Check(styles[typeof(LegacyCanvasPanel)].Color == null && styles[typeof(LegacySlider)].Slant == 30f, "色の検証と標準の角度補正");
@@ -103,7 +111,7 @@ internal static class Program
             File.WriteAllText(file, "[General]\nEnabled = false\n");
             Plugin.BackupExistingConfig(file);
             Check(File.ReadAllText(file + ".before-0.2.0.bak") == invalid, "移行前バックアップの作成と維持");
-            Check(Plugin.ReadStyles(new ConfigFile(file, false), warnings.Add).Count == 0, "全体の無効化");
+            Check(Plugin.ReadStyles(Plugin.RegisterSettings(new ConfigFile(file, false)), warnings.Add).Count == 0, "全体の無効化");
         }
         finally { File.Delete(file); File.Delete(file + ".before-0.2.0.bak"); }
 

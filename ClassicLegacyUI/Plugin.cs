@@ -12,12 +12,13 @@ using Renderite.Shared;
 
 namespace ClassicLegacyUI;
 
-[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.0", "markn2000", "")]
+[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.1", "markn2000", "")]
 [BepInDependency(BepInExResoniteShim.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency(BepisResoniteWrapper.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 public sealed class Plugin : BasePlugin
 {
     private static Plugin? instance;
+    private Settings? settings;
     private volatile Dictionary<Type, (colorX? Color, float? Slant, colorX? Container)> styles = new();
     internal static readonly colorX CommonColor = new(1f, 0.73f, 0.09f, 0.8f, ColorProfile.sRGB);
     internal static readonly colorX PanelColor = new(1f, 0.88f, 0.6f, 0.8f, ColorProfile.sRGB);
@@ -38,7 +39,8 @@ public sealed class Plugin : BasePlugin
                 throw new InvalidOperationException("Shimの色変換が登録されていません。");
             bool newFile = !File.Exists(Config.ConfigFilePath);
             BackupExistingConfig(Config.ConfigFilePath);
-            styles = ReadStyles(Config, message => Log.LogWarning(message));
+            settings = RegisterSettings(Config);
+            styles = ReadStyles(settings, message => Log.LogWarning(message));
             if (newFile) Config.Save();
             MethodInfo target = AccessTools.DeclaredMethod(typeof(DevCreateNewForm), "RunAction",
                 [typeof(IButton), typeof(ButtonEventData), typeof(string)])
@@ -50,7 +52,7 @@ public sealed class Plugin : BasePlugin
         catch (Exception error)
         {
             HarmonyInstance.UnpatchSelf();
-            styles.Clear();
+            styles = new();
             Log.LogError($"初期化できないため外観変更を無効にしました: {error}");
         }
     }
@@ -65,7 +67,7 @@ public sealed class Plugin : BasePlugin
     }
 
     private void OnSettingChanged(object? sender, SettingChangedEventArgs args) =>
-        styles = ReadStyles(Config, message => Log.LogWarning(message));
+        styles = ReadStyles(settings!, message => Log.LogWarning(message));
 
     internal static void BackupExistingConfig(string path)
     {
@@ -73,12 +75,14 @@ public sealed class Plugin : BasePlugin
         if (File.Exists(path) && !File.Exists(backup)) File.Copy(path, backup);
     }
 
-    internal static Dictionary<Type, (colorX? Color, float? Slant, colorX? Container)> ReadStyles(
-        ConfigFile config, Action<string> warn)
+    internal sealed record Settings(ConfigEntry<bool> Enabled,
+        Dictionary<Type, (ConfigEntry<bool> Enabled, ConfigEntry<colorX> Color,
+            ConfigEntry<float>? Slant, ConfigEntry<colorX>? Container)> Styles);
+
+    internal static Settings RegisterSettings(ConfigFile config)
     {
         config.SaveOnConfigSet = false;
-        var result = new Dictionary<Type, (colorX? Color, float? Slant, colorX? Container)>();
-        bool enabled = Read<bool>(config, "General", "Enabled", true, "新規作成するUIの外観変更を有効にする。", warn) == true;
+        var settings = new Settings(config.Bind("General", "Enabled", true, "新規作成するUIの外観変更を有効にする。"), new());
         Add(typeof(LegacyButton), "Button", CommonColor, 22.5f);
         Add(typeof(LegacyCheckbox), "Checkbox", CommonColor);
         Add(typeof(LegacyHorizontalChoiceBar), "HorizontalChoiceBar", CommonColor, 22.5f);
@@ -88,30 +92,44 @@ public sealed class Plugin : BasePlugin
         Add(typeof(LegacyRadio), "Radio", CommonColor);
         Add(typeof(LegacySlider), "Slider", CommonColor, 22.5f);
         Add(typeof(LegacyTextField), "TextField", CommonColor, 22.5f);
-        return result;
+        return settings;
 
         void Add(Type type, string section, colorX defaultColor, float? defaultSlant = null)
         {
-            bool active = Read<bool>(config, section, "Enabled", true, "この種類の外観変更を有効にする。", warn) == true;
+            var active = config.Bind(section, "Enabled", true, "この種類の外観変更を有効にする。");
             bool progress = type == typeof(LegacyProgressBar);
             const string colorHelp = "色を標準の色編集で指定。各成分0〜1、sRGB/Linear対応。Aは標準色との混合率。次に作るUIから反映。";
-            colorX? color = Read(config, section, progress ? "BarColor" : "Color", defaultColor, colorHelp, warn, ValidColor);
-            colorX? container = progress ? Read(config, section, "ContainerColor", PanelColor, colorHelp, warn, ValidColor) : null;
-            float? slant = defaultSlant.HasValue
-                ? Read(config, section, "Slant", defaultSlant.Value, "形状の傾き（度）。-30〜30。次に作るUIから反映。", warn, ValidSlant,
-                    new AcceptableValueRange<float>(-30f, 30f))
+            var color = config.Bind(section, progress ? "BarColor" : "Color", defaultColor, colorHelp);
+            var container = progress ? config.Bind(section, "ContainerColor", PanelColor, colorHelp) : null;
+            var slant = defaultSlant.HasValue
+                ? config.Bind(section, "Slant", defaultSlant.Value, new ConfigDescription(
+                    "形状の傾き（度）。-30〜30。次に作るUIから反映。", new AcceptableValueRange<float>(-30f, 30f)))
                 : null;
-            if (enabled && active) result.Add(type, (color, slant, container));
+            settings.Styles.Add(type, (active, color, slant, container));
         }
     }
 
-    internal static T? Read<T>(ConfigFile config, string section, string key, T fallback,
-        string description, Action<string> warn, Func<T, bool>? validate = null, AcceptableValueBase? range = null) where T : struct
+    internal static Dictionary<Type, (colorX? Color, float? Slant, colorX? Container)> ReadStyles(
+        Settings settings, Action<string> warn)
     {
-        T value = config.Bind(section, key, fallback, new ConfigDescription(description, range)).Value;
-        if (validate != null && !validate(value))
+        var result = new Dictionary<Type, (colorX? Color, float? Slant, colorX? Container)>(settings.Styles.Count);
+        bool enabled = settings.Enabled.Value;
+        foreach (var (type, entries) in settings.Styles)
         {
-            warn($"[{section}] {key} を適用しません: 対応する値の範囲外です。");
+            var style = (Read(entries.Color, warn, ValidColor), Read(entries.Slant, warn, ValidSlant),
+                Read(entries.Container, warn, ValidColor));
+            if (enabled && entries.Enabled.Value) result.Add(type, style);
+        }
+        return result;
+    }
+
+    private static T? Read<T>(ConfigEntry<T>? entry, Action<string> warn, Func<T, bool> validate) where T : struct
+    {
+        if (entry == null) return null;
+        T value = entry.Value;
+        if (!validate(value))
+        {
+            warn($"[{entry.Definition.Section}] {entry.Definition.Key} を適用しません: 対応する値の範囲外です。");
             return null;
         }
         return value;
@@ -153,11 +171,12 @@ public sealed class Plugin : BasePlugin
         create(slot);
         try
         {
-            if (instance == null || instance.styles.Count == 0 || !IsTargetCategory(category) || eventData.source?.Slot?.IsUnderLocalUser != true)
+            var styles = instance?.styles;
+            if (styles == null || styles.Count == 0 || !IsTargetCategory(category) || eventData.source?.Slot?.IsUnderLocalUser != true)
                 return;
             foreach (Component component in slot.GetComponents<Component>())
             {
-                if (!instance.styles.TryGetValue(component.GetType(), out var style)) continue;
+                if (!styles.TryGetValue(component.GetType(), out var style)) continue;
                 Apply(component, style.Color, style.Slant, style.Container);
             }
         }
