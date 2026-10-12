@@ -36,7 +36,7 @@ public sealed class Plugin : BasePlugin
         try
         {
             if (!TomlTypeConverter.CanConvert(typeof(colorX)))
-                throw new InvalidOperationException("Shimの色変換が登録されていません。");
+                throw new InvalidOperationException("The Shim color converter is not registered.");
             bool newFile = !File.Exists(Config.ConfigFilePath);
             BackupExistingConfig(Config.ConfigFilePath);
             settings = RegisterSettings(Config);
@@ -44,16 +44,16 @@ public sealed class Plugin : BasePlugin
             if (newFile) Config.Save();
             MethodInfo target = AccessTools.DeclaredMethod(typeof(DevCreateNewForm), "RunAction",
                 [typeof(IButton), typeof(ButtonEventData), typeof(string)])
-                ?? throw new MissingMethodException("DevCreateNewForm.RunActionが見つかりません。");
+                ?? throw new MissingMethodException("DevCreateNewForm.RunAction was not found.");
             HarmonyInstance.Patch(target, transpiler: new HarmonyMethod(typeof(Plugin), nameof(Transpile)));
             Config.SettingChanged += OnSettingChanged;
-            Log.LogInfo("ClassicLegacyUIを読み込みました。設定画面の変更は次に作るUIから反映します。");
+            Log.LogInfo("ClassicLegacyUI loaded. Settings changes apply to newly created UI.");
         }
         catch (Exception error)
         {
             HarmonyInstance.UnpatchSelf();
             styles = new();
-            Log.LogError($"初期化できないため外観変更を無効にしました: {error}");
+            Log.LogError($"Initialization failed; styling has been disabled: {error}");
         }
     }
 
@@ -82,7 +82,7 @@ public sealed class Plugin : BasePlugin
     internal static Settings RegisterSettings(ConfigFile config)
     {
         config.SaveOnConfigSet = false;
-        var settings = new Settings(config.Bind("General", "Enabled", true, "新規作成するUIの外観変更を有効にする。"), new());
+        var settings = new Settings(config.Bind("General", "Enabled", true, "Enable styling for newly created UI."), new());
         Add(typeof(LegacyButton), "Button", CommonColor, 22.5f);
         Add(typeof(LegacyCheckbox), "Checkbox", CommonColor);
         Add(typeof(LegacyHorizontalChoiceBar), "HorizontalChoiceBar", CommonColor, 22.5f);
@@ -96,14 +96,14 @@ public sealed class Plugin : BasePlugin
 
         void Add(Type type, string section, colorX defaultColor, float? defaultSlant = null)
         {
-            var active = config.Bind(section, "Enabled", true, "この種類の外観変更を有効にする。");
+            var active = config.Bind(section, "Enabled", true, "Enable styling for this UI type.");
             bool progress = type == typeof(LegacyProgressBar);
-            const string colorHelp = "色を標準の色編集で指定。各成分0〜1、sRGB/Linear対応。Aは標準色との混合率。次に作るUIから反映。";
+            const string colorHelp = "Color in sRGB or Linear, with each channel from 0 to 1. Alpha blends with the default color. Applies to newly created UI.";
             var color = config.Bind(section, progress ? "BarColor" : "Color", defaultColor, colorHelp);
             var container = progress ? config.Bind(section, "ContainerColor", PanelColor, colorHelp) : null;
             var slant = defaultSlant.HasValue
                 ? config.Bind(section, "Slant", defaultSlant.Value, new ConfigDescription(
-                    "形状の傾き（度）。-30〜30。次に作るUIから反映。", new AcceptableValueRange<float>(-30f, 30f)))
+                    "Slant in degrees, from -30 to 30. Applies to newly created UI.", new AcceptableValueRange<float>(-30f, 30f)))
                 : null;
             settings.Styles.Add(type, (active, color, slant, container));
         }
@@ -129,7 +129,7 @@ public sealed class Plugin : BasePlugin
         T value = entry.Value;
         if (!validate(value))
         {
-            warn($"[{entry.Definition.Section}] {entry.Definition.Key} を適用しません: 対応する値の範囲外です。");
+            warn($"[{entry.Definition.Section}] {entry.Definition.Key} was not applied: value is outside the supported range.");
             return null;
         }
         return value;
@@ -153,11 +153,11 @@ public sealed class Plugin : BasePlugin
         var matches = code.Select((instruction, index) => (instruction, index))
             .Where(pair => pair.instruction.Calls(invoke)).ToArray();
         if (matches.Length != 1)
-            throw new InvalidOperationException($"生成アクション呼び出しが1か所ではありません（{matches.Length}か所）。");
+            throw new InvalidOperationException($"Expected exactly one creation action call; found {matches.Length}.");
         int index = matches[0].index;
         CodeInstruction original = code[index];
         if (original.blocks.Count != 0)
-            throw new InvalidOperationException("生成アクションの例外ブロック構造が想定と異なります。");
+            throw new InvalidOperationException("The creation action has an unexpected exception block structure.");
         var source = new CodeInstruction(OpCodes.Ldarg_2);
         source.labels.AddRange(original.labels);
         code.RemoveAt(index);
@@ -183,7 +183,7 @@ public sealed class Plugin : BasePlugin
         catch (Exception error)
         {
             // 外観処理の失敗で、元の生成処理のUndo終了や後続通知を妨げない。
-            instance?.Log.LogError($"生成済みUIへの外観適用に失敗しました: {error}");
+            instance?.Log.LogError($"Failed to apply styling to the newly created UI: {error}");
         }
     }
 

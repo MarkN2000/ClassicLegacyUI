@@ -3,7 +3,7 @@ Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
 $project = Join-Path $PSScriptRoot 'ClassicLegacyUI\ClassicLegacyUI.csproj'
 dotnet build $project -c Release --no-restore
-if ($LASTEXITCODE -ne 0) { throw 'Releaseビルドに失敗しました。' }
+if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
 
 $version = ([xml](Get-Content -LiteralPath $project -Raw)).Project.PropertyGroup.Version
 $dll = Join-Path $PSScriptRoot 'ClassicLegacyUI\bin\Release\net10.0\ClassicLegacyUI.dll'
@@ -37,20 +37,20 @@ try {
     $zip = [IO.Compression.ZipFile]::OpenRead($temporary)
     try {
         $expected = @('README.md', 'LICENSE', 'manifest.json', 'icon.png', 'plugins/ClassicLegacyUI.dll')
-        if (Compare-Object $expected @($zip.Entries.FullName)) { throw 'ZIPのファイル構成が一致しません。' }
+        if (Compare-Object $expected @($zip.Entries.FullName)) { throw 'ZIP entries do not match the expected files.' }
         $reader = [IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())
         try { $metadata = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
         if ($metadata.name -ne 'ClassicLegacyUI' -or $metadata.version_number -ne $version -or $metadata.dependencies.Count -ne 0) {
-            throw 'manifestの内容が一致しません。'
+            throw 'Manifest metadata does not match the expected values.'
         }
         $entryStream = $zip.GetEntry('plugins/ClassicLegacyUI.dll').Open()
         $sha = [Security.Cryptography.SHA256]::Create()
         try { $hash = [BitConverter]::ToString($sha.ComputeHash($entryStream)).Replace('-', '') }
         finally { $entryStream.Dispose(); $sha.Dispose() }
-        if ($hash -ne (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash) { throw 'ZIP内のDLLがビルド出力と一致しません。' }
+        if ($hash -ne (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash) { throw 'The DLL in the ZIP does not match the build output.' }
     } finally { $zip.Dispose() }
     Move-Item -LiteralPath $temporary -Destination $output -Force
-    Write-Output "作成・検査に成功: $output"
+    Write-Output "Package created and verified: $output"
 } finally {
     if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary }
 }
