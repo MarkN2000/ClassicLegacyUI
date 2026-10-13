@@ -1,7 +1,7 @@
 # ClassicLegacyUI
 [![Thunderstore Badge](https://modding.resonite.net/assets/available-on-thunderstore.svg)](https://thunderstore.io/c/resonite/)
 
-![alt text](icon.png)
+![ClassicLegacyUI](https://raw.githubusercontent.com/MarkN2000/ClassicLegacyUI/main/icon.png)
 
 A [Resonite](https://resonite.com/) mod that brings a classic look to Legacy UI you create through Create New.
 Customize colors and slants in Bepis Mod Settings.
@@ -17,4 +17,4 @@ Inspired by [CustomLegacyUI](https://github.com/HamoCorp/CustomLegacyUI) ([MIT](
 
 Licensed under the [MIT License](https://github.com/MarkN2000/ClassicLegacyUI/blob/main/LICENSE).
 
-[homepage](https://markn2000.com/)
+[markn`s homepage](https://markn2000.com/posts/2025-09-08-resonite-mod-list/)
