@@ -144,7 +144,10 @@ internal static class Program
         var input = new[] { new CodeInstruction(OpCodes.Ldarg_0), new CodeInstruction(OpCodes.Ldarg_1),
             new CodeInstruction(OpCodes.Br, label), call, new CodeInstruction(OpCodes.Ret) };
         var patched = Plugin.Transpile(input).ToList();
-        Check(patched[3].labels.Contains(label) && patched[3].opcode == OpCodes.Ldarg_2, "Preserve branch targets");
+        Check(patched[3].labels.Contains(label) && patched[3].opcode == OpCodes.Ldarg_3, "Preserve branch targets");
+        Check(patched.All(code => code.opcode != OpCodes.Ldarg_2)
+            && wrapper.GetParameters().Select(parameter => parameter.ParameterType)
+                .SequenceEqual(new[] { typeof(Action<Slot>), typeof(Slot), typeof(string) }), "Styling does not receive the input source");
         foreach (CodeInstruction instruction in patched)
         {
             foreach (Label targetLabel in instruction.labels) il.MarkLabel(targetLabel);
@@ -166,7 +169,7 @@ internal static class Program
             [typeof(IButton), typeof(ButtonEventData), typeof(string)]);
         var original = PatchProcessor.GetOriginalInstructions(runAction);
         var actual = Plugin.Transpile(original).ToList();
-        Check(actual.Count == original.Count + 2 && actual.Count(code => code.Calls(wrapper)) == 1, "IL transformation compatibility with current DLLs (without execution)");
+        Check(actual.Count == original.Count + 1 && actual.Count(code => code.Calls(wrapper)) == 1, "IL transformation compatibility with current DLLs (without execution)");
         Console.WriteLine("PASS: Defaults, configuration round trips, invalid values, file preservation, category filtering, IL transformation, and current APIs. In-game behavior has not been tested.");
     }
 

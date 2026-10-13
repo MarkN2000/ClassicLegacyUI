@@ -12,7 +12,7 @@ using Renderite.Shared;
 
 namespace ClassicLegacyUI;
 
-[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.2", "markn2000", "https://github.com/MarkN2000/ClassicLegacyUI")]
+[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.3", "markn2000", "https://github.com/MarkN2000/ClassicLegacyUI")]
 [BepInDependency(BepInExResoniteShim.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency(BepisResoniteWrapper.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 public sealed class Plugin : BasePlugin
@@ -157,21 +157,21 @@ public sealed class Plugin : BasePlugin
         CodeInstruction original = code[index];
         if (original.blocks.Count != 0)
             throw new InvalidOperationException("The creation action has an unexpected exception block structure.");
-        var source = new CodeInstruction(OpCodes.Ldarg_2);
-        source.labels.AddRange(original.labels);
+        var category = new CodeInstruction(OpCodes.Ldarg_3);
+        category.labels.AddRange(original.labels);
         code.RemoveAt(index);
-        code.InsertRange(index, [source, new CodeInstruction(OpCodes.Ldarg_3),
+        code.InsertRange(index, [category,
             new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Plugin), nameof(CreateAndStyle)))]);
         return code;
     }
 
-    internal static void CreateAndStyle(Action<Slot> create, Slot slot, ButtonEventData eventData, string category)
+    internal static void CreateAndStyle(Action<Slot> create, Slot slot, string category)
     {
         create(slot);
         try
         {
             var styles = instance?.styles;
-            if (styles == null || styles.Count == 0 || !IsTargetCategory(category) || eventData.source?.Slot?.IsUnderLocalUser != true)
+            if (styles == null || styles.Count == 0 || !IsTargetCategory(category))
                 return;
             foreach (Component component in slot.GetComponents<Component>())
             {
