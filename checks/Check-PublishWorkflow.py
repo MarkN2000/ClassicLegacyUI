@@ -1,7 +1,6 @@
 """投稿せず、ワークフロー内のZIP検査を実行する。Python標準ライブラリのみ使用。"""
 
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -31,10 +30,9 @@ with tempfile.TemporaryDirectory() as temporary:
                     archive.writestr("README.md", b"duplicate")
         if case == "multiple-zips":
             (directory / "package/ClassicLegacyUI-other.zip").write_bytes(package.read_bytes())
-        result = subprocess.run([sys.executable, "-c", code], cwd=directory, capture_output=True, text=True,
-                                env={**os.environ, "GITHUB_OUTPUT": str(directory / "output")})
+        result = subprocess.run([sys.executable, "-c", code], cwd=directory, capture_output=True, text=True)
         assert (result.returncode == 0) == (case == "valid"), f"{case}: {result.stdout}{result.stderr}"
         if case == "valid":
-            assert (directory / "output").read_text().strip() == "version=0.2.3"
+            assert "Validated ClassicLegacyUI 0.2.3." in result.stdout
             assert (directory / "package.zip").is_file()
 print("PASS: Release package validation; no upload performed.")

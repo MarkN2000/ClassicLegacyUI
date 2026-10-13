@@ -69,8 +69,12 @@ internal static class Program
             Check(styles.All(pair => roundTrip[pair.Key].Equals(pair.Value)), "Configuration round trip");
 
             config["General", "Enabled"].BoxedValue = false;
-            Check(Plugin.ReadStyles(settings, warnings.Add).Count == 0, "Disable globally through a settings entry");
+            config["Button", "Color"].BoxedValue = new colorX(float.NaN, 0f, 0f, 1f);
+            Check(Plugin.ReadStyles(settings, warnings.Add).Count == 0 && warnings.Count == 0, "Skip disabled settings without validating their values");
             config["General", "Enabled"].BoxedValue = true;
+            config["Button", "Enabled"].BoxedValue = false;
+            Check(!Plugin.ReadStyles(settings, warnings.Add).ContainsKey(typeof(LegacyButton)) && warnings.Count == 0, "Skip disabled UI types without validating their values");
+            config["Button", "Enabled"].BoxedValue = true;
             config["Button", "Color"].BoxedValue = new colorX(0.1f, 0.2f, 0.3f, 1f, ColorProfile.Linear);
             config["Button", "Slant"].BoxedValue = -22.5f;
             var changed = Plugin.ReadStyles(settings, warnings.Add);
@@ -110,7 +114,6 @@ internal static class Program
 
             const string invalid = "[Button]\nColor = malformed\nSlant = NaN\n[Panel]\nColor = [1; 2; 0; 0.8; sRGB]\n[Slider]\nSlant = 100\n[Checkbox]\nEnabled = false\n[Radio]\nEnabled = bad\n[ProgressBar]\nContainerColor = [1; 1; 1; 1; Linear]\n";
             File.WriteAllText(file, invalid);
-            Plugin.BackupExistingConfig(file);
             styles = Plugin.ReadStyles(Plugin.RegisterSettings(new ConfigFile(file, false)), warnings.Add);
             Check(styles[typeof(LegacyButton)].Color == Plugin.CommonColor
                 && styles[typeof(LegacyButton)].Slant == -90f, "Native fallback for malformed values and NaN clamping");
@@ -120,11 +123,10 @@ internal static class Program
             Check(warnings.Count == 1, "Log out-of-range colors");
             Check(File.ReadAllText(file) == invalid, "Preserve existing files with invalid values");
             File.WriteAllText(file, "[General]\nEnabled = false\n");
-            Plugin.BackupExistingConfig(file);
-            Check(File.ReadAllText(file + ".before-0.2.0.bak") == invalid, "Create and preserve the pre-migration backup");
+            Check(!File.Exists(file + ".before-0.2.0.bak"), "No automatic configuration backup");
             Check(Plugin.ReadStyles(Plugin.RegisterSettings(new ConfigFile(file, false)), warnings.Add).Count == 0, "Disable globally");
         }
-        finally { File.Delete(file); File.Delete(file + ".before-0.2.0.bak"); }
+        finally { File.Delete(file); }
 
         Check(Plugin.ValidSlant(-90) && Plugin.ValidSlant(90) && !Plugin.ValidSlant(-90.01f) && !Plugin.ValidSlant(90.01f)
             && !Plugin.ValidSlant(float.NaN) && !Plugin.ValidSlant(float.NegativeInfinity)

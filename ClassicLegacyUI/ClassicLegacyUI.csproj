@@ -1,15 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>0.2.5</Version>
+    <Version>0.2.6</Version>
     <Authors>markn2000</Authors>
     <PackageId>markn2000.ClassicLegacyUI</PackageId>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Resonite</GamePath>
     <DevProfile Condition="'$(DevProfile)' == ''">$(APPDATA)\com.kesomannen.gale\resonite\profiles\Mod開発</DevProfile>
-    <PluginTargetDir>$(DevProfile)\BepInEx\plugins\ClassicLegacyUI</PluginTargetDir>
-    <CopyToPlugins>false</CopyToPlugins>
   </PropertyGroup>
   <!-- 導入済みのDLLを参照する。依存DLLは出力・配置しない。 -->
   <ItemGroup>
@@ -19,7 +17,4 @@
     <Reference Include="$(DevProfile)\BepInEx\plugins\ResoniteModding-BepisResoniteWrapper\BepisResoniteWrapper\BepisResoniteWrapper.dll" Private="false" />
     <InternalsVisibleTo Include="ClassicLegacyUI.Checks" />
   </ItemGroup>
-  <Target Name="CopyPlugin" AfterTargets="Build" Condition="'$(CopyToPlugins)' == 'true'">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginTargetDir)" />
-  </Target>
 </Project>

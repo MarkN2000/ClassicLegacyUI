@@ -33,11 +33,9 @@ jobs:
           gh release download --repo "$GH_REPO" --pattern 'ClassicLegacyUI-*.zip' --dir package -- "$RELEASE_TAG"
 
       - name: Validate the package
-        id: package
         run: |
           python3 - <<'PY'
           import json
-          import os
           import pathlib
           import re
           import zipfile
@@ -56,8 +54,6 @@ jobs:
           if manifest.get("name") != "ClassicLegacyUI" or not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version):
               raise SystemExit("Invalid package name or version.")
           packages[0].rename("package.zip")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"version={version}\n")
           print(f"Validated ClassicLegacyUI {version}.")
           PY
 

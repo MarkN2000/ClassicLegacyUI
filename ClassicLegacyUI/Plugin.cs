@@ -12,7 +12,7 @@ using Renderite.Shared;
 
 namespace ClassicLegacyUI;
 
-[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.5", "markn2000", "https://github.com/MarkN2000/ClassicLegacyUI")]
+[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.6", "markn2000", "https://github.com/MarkN2000/ClassicLegacyUI")]
 [BepInDependency(BepInExResoniteShim.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency(BepisResoniteWrapper.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 public sealed class Plugin : BasePlugin
@@ -25,7 +25,6 @@ public sealed class Plugin : BasePlugin
 
     public override void Load()
     {
-        Config.SaveOnConfigSet = false;
         instance = this;
         ResoniteHooks.OnEngineReady += OnEngineReady;
     }
@@ -35,10 +34,7 @@ public sealed class Plugin : BasePlugin
         ResoniteHooks.OnEngineReady -= OnEngineReady;
         try
         {
-            if (!TomlTypeConverter.CanConvert(typeof(colorX)))
-                throw new InvalidOperationException("The Shim color converter is not registered.");
             bool newFile = !File.Exists(Config.ConfigFilePath);
-            BackupExistingConfig(Config.ConfigFilePath);
             settings = RegisterSettings(Config);
             styles = ReadStyles(settings, message => Log.LogWarning(message));
             if (newFile) Config.Save();
@@ -68,12 +64,6 @@ public sealed class Plugin : BasePlugin
 
     private void OnSettingChanged(object? sender, SettingChangedEventArgs args) =>
         styles = ReadStyles(settings!, message => Log.LogWarning(message));
-
-    internal static void BackupExistingConfig(string path)
-    {
-        string backup = path + ".before-0.2.0.bak";
-        if (File.Exists(path) && !File.Exists(backup)) File.Copy(path, backup);
-    }
 
     internal sealed record Settings(ConfigEntry<bool> Enabled,
         Dictionary<Type, (ConfigEntry<bool> Enabled, ConfigEntry<colorX> Color,
@@ -113,12 +103,13 @@ public sealed class Plugin : BasePlugin
         Settings settings, Action<string> warn)
     {
         var result = new Dictionary<Type, (colorX? Color, float? Slant, colorX? Container)>(settings.Styles.Count);
-        bool enabled = settings.Enabled.Value;
+        if (!settings.Enabled.Value) return result;
         foreach (var (type, entries) in settings.Styles)
         {
+            if (!entries.Enabled.Value) continue;
             var style = (Read(entries.Color, warn, ValidColor), Read(entries.Slant, warn, ValidSlant),
                 Read(entries.Container, warn, ValidColor));
-            if (enabled && entries.Enabled.Value) result.Add(type, style);
+            result.Add(type, style);
         }
         return result;
     }
