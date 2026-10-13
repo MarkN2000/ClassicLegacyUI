@@ -49,8 +49,9 @@ internal static class Program
                 && config.Values.Count(entry => entry.SettingType == typeof(float)) == 6
                 && config.Values.All(entry => entry.SettingType != typeof(string)), "Native setting types for the settings UI");
             Check(Coder.IsEnginePrimitive(typeof(colorX)), "Color type supported by the native editor");
-            Check(config["Button", "Slant"].Description.AcceptableValues is AcceptableValueRange<float> range
-                && range.MinValue == -30f && range.MaxValue == 30f, "Slant slider range");
+            Check(config.Values.Where(entry => entry.SettingType == typeof(float)).All(entry =>
+                entry.Description.AcceptableValues is AcceptableValueRange<float> range
+                && range.MinValue == -90f && range.MaxValue == 90f), "Slant slider ranges for all six UI types");
             foreach (var pair in styles)
             {
                 colorX expectedColor = pair.Key == typeof(LegacyCanvasPanel) ? Plugin.PanelColor
@@ -78,6 +79,16 @@ internal static class Program
             Check(styles[typeof(LegacyButton)].Slant == 22.5f, "Previously captured values remain unchanged");
             Check(File.ReadAllText(file) == saved, "No automatic save on each settings change");
 
+            foreach (float angle in new[] { -90f, -75f, 75f, 90f })
+            {
+                foreach (var entry in settings.Styles.Values)
+                    if (entry.Slant != null) entry.Slant.Value = angle;
+                var expanded = Plugin.ReadStyles(settings, warnings.Add);
+                Check(settings.Styles.Where(pair => pair.Value.Slant != null)
+                    .All(pair => expanded[pair.Key].Slant == angle), "Preserve expanded slant values for all six UI types");
+            }
+            config["Button", "Slant"].BoxedValue = -22.5f;
+
             // 登録元から外しても保持したConfigEntryを読み、再登録しないことを確認する。
             config.Remove(new ConfigDefinition("Button", "Color"));
             var retained = Plugin.ReadStyles(settings, warnings.Add);
@@ -97,13 +108,13 @@ internal static class Program
             migratedConfig.Reload();
             Check(Plugin.ReadStyles(migratedSettings, warnings.Add)[typeof(LegacyButton)].Slant == 5f, "Standard configuration reload");
 
-            const string invalid = "[Button]\nColor = malformed\nSlant = NaN\n[Panel]\nColor = [1; 2; 0; 0.8; sRGB]\n[Slider]\nSlant = 90\n[Checkbox]\nEnabled = false\n[Radio]\nEnabled = bad\n[ProgressBar]\nContainerColor = [1; 1; 1; 1; Linear]\n";
+            const string invalid = "[Button]\nColor = malformed\nSlant = NaN\n[Panel]\nColor = [1; 2; 0; 0.8; sRGB]\n[Slider]\nSlant = 100\n[Checkbox]\nEnabled = false\n[Radio]\nEnabled = bad\n[ProgressBar]\nContainerColor = [1; 1; 1; 1; Linear]\n";
             File.WriteAllText(file, invalid);
             Plugin.BackupExistingConfig(file);
             styles = Plugin.ReadStyles(Plugin.RegisterSettings(new ConfigFile(file, false)), warnings.Add);
             Check(styles[typeof(LegacyButton)].Color == Plugin.CommonColor
-                && styles[typeof(LegacyButton)].Slant == -30f, "Native fallback for malformed values and NaN clamping");
-            Check(styles[typeof(LegacyCanvasPanel)].Color == null && styles[typeof(LegacySlider)].Slant == 30f, "Color validation and native slant clamping");
+                && styles[typeof(LegacyButton)].Slant == -90f, "Native fallback for malformed values and NaN clamping");
+            Check(styles[typeof(LegacyCanvasPanel)].Color == null && styles[typeof(LegacySlider)].Slant == 90f, "Color validation and native slant clamping");
             Check(styles[typeof(LegacyProgressBar)].Container!.Value.Profile == ColorProfile.Linear, "Linear input from the native color editor");
             Check(!styles.ContainsKey(typeof(LegacyCheckbox)) && styles.ContainsKey(typeof(LegacyRadio)), "Disabled entries and fallback for malformed values");
             Check(warnings.Count == 1, "Log out-of-range colors");
@@ -115,7 +126,8 @@ internal static class Program
         }
         finally { File.Delete(file); File.Delete(file + ".before-0.2.0.bak"); }
 
-        Check(Plugin.ValidSlant(-30) && Plugin.ValidSlant(30) && !Plugin.ValidSlant(30.01f)
+        Check(Plugin.ValidSlant(-90) && Plugin.ValidSlant(90) && !Plugin.ValidSlant(-90.01f) && !Plugin.ValidSlant(90.01f)
+            && !Plugin.ValidSlant(float.NaN) && !Plugin.ValidSlant(float.NegativeInfinity)
             && !Plugin.ValidSlant(float.PositiveInfinity), "Slant boundaries");
         Check(!Plugin.ValidColor(new colorX(float.NaN, 0, 0, 1)), "Non-finite color channels");
         Check(Plugin.IsTargetCategory(@"Object\Legacy UI") && Plugin.IsTargetCategory("/Object/Legacy UI/"), "Category separators");

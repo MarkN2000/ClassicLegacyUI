@@ -12,7 +12,7 @@ using Renderite.Shared;
 
 namespace ClassicLegacyUI;
 
-[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.1", "markn2000", "https://github.com/MarkN2000/ClassicLegacyUI")]
+[ResonitePlugin("markn2000.ClassicLegacyUI", "ClassicLegacyUI", "0.2.2", "markn2000", "https://github.com/MarkN2000/ClassicLegacyUI")]
 [BepInDependency(BepInExResoniteShim.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency(BepisResoniteWrapper.PluginMetadata.GUID, BepInDependency.DependencyFlags.HardDependency)]
 public sealed class Plugin : BasePlugin
@@ -103,7 +103,7 @@ public sealed class Plugin : BasePlugin
             var container = progress ? config.Bind(section, "ContainerColor", PanelColor, colorHelp) : null;
             var slant = defaultSlant.HasValue
                 ? config.Bind(section, "Slant", defaultSlant.Value, new ConfigDescription(
-                    "Slant in degrees, from -30 to 30. Applies to newly created UI.", new AcceptableValueRange<float>(-30f, 30f)))
+                    "Slant in degrees, from -90 to 90. Applies to newly created UI.", new AcceptableValueRange<float>(-90f, 90f)))
                 : null;
             settings.Styles.Add(type, (active, color, slant, container));
         }
@@ -139,8 +139,7 @@ public sealed class Plugin : BasePlugin
         && Unit(value.r) && Unit(value.g) && Unit(value.b) && Unit(value.a);
     private static bool Unit(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
 
-    // ponytail: 初版は標準寸法の-30〜30度に限定。範囲拡張時は各部品の寸法と操作領域を検証する。
-    internal static bool ValidSlant(float value) => float.IsFinite(value) && value >= -30f && value <= 30f;
+    internal static bool ValidSlant(float value) => float.IsFinite(value) && value >= -90f && value <= 90f;
 
     // RunActionは呼び出し前にpath引数をカテゴリのパスへ更新する。
     internal static bool IsTargetCategory(string? category) =>
