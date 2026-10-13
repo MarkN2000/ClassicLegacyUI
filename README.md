@@ -1,16 +1,15 @@
 # ClassicLegacyUI
+[![Thunderstore Badge](https://modding.resonite.net/assets/available-on-thunderstore.svg)](https://thunderstore.io/c/resonite/)
 
-A BepisLoader mod that brings a classic look to Legacy UI you create through Create New.
-Customize colors and slants in Bepis Mod Settings; changes apply to newly created UI only.
+![alt text](icon.png)
 
-## Installation (Manual)
+A [Resonite](https://resonite.com/) mod that brings a classic look to Legacy UI you create through Create New.
+Customize colors and slants in Bepis Mod Settings.
 
-1. Install [BepisLoader](https://thunderstore.io/c/resonite/p/ResoniteModding/BepisLoader/) 1.7.0 or newer, [BepInExResoniteShim](https://thunderstore.io/c/resonite/p/ResoniteModding/BepInExResoniteShim/), [BepisResoniteWrapper](https://thunderstore.io/c/resonite/p/ResoniteModding/BepisResoniteWrapper/), and [Bepis Mod Settings](https://thunderstore.io/c/resonite/p/ResoniteModding/BepisModSettings/).
-2. Download the ClassicLegacyUI ZIP package.
-3. Unzip it, then place its `plugins` directory inside `Resonite/BepInEx/` (usually `C:\Program Files (x86)\Steam\steamapps\common\Resonite\BepInEx\`).
-4. Launch Resonite. Loading errors are recorded in the BepInEx logs.
+## Installation
 
-For Gale, select the ZIP via **Import → local mod**.
+1. Install [BepisLoader](https://thunderstore.io/c/resonite/p/ResoniteModding/BepisLoader/).
+2. Install via Thunderstore mod manager or download from [Releases](https://github.com/MarkN2000/ClassicLegacyUI/releases)
 
 ## Credits
 
