@@ -1,6 +1,4 @@
-﻿param([switch]$Thunderstore)
-
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
 $project = Join-Path $PSScriptRoot 'ClassicLegacyUI\ClassicLegacyUI.csproj'
@@ -11,18 +9,14 @@ $version = ([xml](Get-Content -LiteralPath $project -Raw)).Project.PropertyGroup
 $dll = Join-Path $PSScriptRoot 'ClassicLegacyUI\bin\Release\net10.0\ClassicLegacyUI.dll'
 $outputDir = Join-Path $PSScriptRoot 'dist'
 [IO.Directory]::CreateDirectory($outputDir) | Out-Null
-$suffix = if ($Thunderstore) { '' } else { '-local' }
-$output = Join-Path $outputDir "ClassicLegacyUI-$version$suffix.zip"
+$output = Join-Path $outputDir "ClassicLegacyUI-$version.zip"
 $temporary = "$output.tmp"
-$dependencies = @()
-if ($Thunderstore) {
-    $dependencies = @(
-        'ResoniteModding-BepisLoader-1.7.0'
-        'ResoniteModding-BepInExResoniteShim-0.9.3'
-        'ResoniteModding-BepisResoniteWrapper-1.0.2'
-        'ResoniteModding-BepisModSettings-1.6.6'
-    )
-}
+$dependencies = @(
+    'ResoniteModding-BepisLoader-1.7.0'
+    'ResoniteModding-BepInExResoniteShim-0.9.3'
+    'ResoniteModding-BepisResoniteWrapper-1.0.2'
+    'ResoniteModding-BepisModSettings-1.6.6'
+)
 $manifest = [ordered]@{
     name = 'ClassicLegacyUI'
     author = 'markn2000'
