@@ -16,6 +16,6 @@ GitHubの正式Releaseを公開すると、添付ZIPをThunderstoreの `markn200
 
 Releaseのタグ名は自由です。投稿バージョンはZIP内の `manifest.json` から取得します。同じバージョンの再投稿はできないため、公開済み0.2.3をテスト投稿せず、次の更新から利用します。
 
-トークン未設定などで投稿に失敗した場合は、原因を直してGitHub Actionsの **Re-run failed jobs** で再実行できます。通信エラーの場合は、再実行前にThunderstoreへの掲載状況を確認してください。
+トークン未設定などで投稿に失敗した場合は、原因を直してGitHub Actionsの **Re-run failed jobs** で再実行できます。ワークフロー自体を修正した場合は **Run workflow** で修正済みのmainを選び、`release_tag` に既存Releaseのタグを指定します。通信エラーの場合は、再実行前にThunderstoreへの掲載状況を確認してください。
 
 ZIP検査の変更時は `python checks/Check-PublishWorkflow.py` で、投稿せずに正常系・異常系を確認できます。

@@ -10,6 +10,7 @@ import textwrap
 import zipfile
 
 workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/publish-thunderstore.yml").read_text(encoding="utf-8")
+assert "--file package.zip" in workflow and "--package-version" not in workflow, "TCLI file mode rejects package-version."
 code = textwrap.dedent(workflow.split("python3 - <<'PY'\n", 1)[1].split("          PY\n", 1)[0])
 with tempfile.TemporaryDirectory() as temporary:
     root = Path(temporary)

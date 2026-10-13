@@ -3,6 +3,12 @@ name: Publish to Thunderstore
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release to publish
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,8 +27,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release download --repo "$GH_REPO" --pattern 'ClassicLegacyUI-*.zip' --dir package -- "$RELEASE_TAG"
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+        run: |
+          test "$(gh release view --repo "$GH_REPO" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease' -- "$RELEASE_TAG")" = false
+          gh release download --repo "$GH_REPO" --pattern 'ClassicLegacyUI-*.zip' --dir package -- "$RELEASE_TAG"
 
       - name: Validate the package
         id: package
@@ -63,7 +71,6 @@ jobs:
       - name: Publish the package
         env:
           TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
-          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: |
           if [ -z "$TCLI_AUTH_TOKEN" ]; then
             echo "::error::Set the THUNDERSTORE_TOKEN repository secret first."
@@ -81,4 +88,4 @@ jobs:
           TOML
           "$RUNNER_TEMP/tcli-0.2.4-linux-x64/tcli" publish \
             --config-path "$RUNNER_TEMP/thunderstore.toml" \
-            --package-version "$PACKAGE_VERSION" --file package.zip
+            --file package.zip
