@@ -16,3 +16,5 @@ Customize colors and slants in Bepis Mod Settings.
 Inspired by [CustomLegacyUI](https://github.com/HamoCorp/CustomLegacyUI) ([MIT](https://github.com/HamoCorp/CustomLegacyUI/blob/d55152d46b9c89b044120edd9c697cbdc432bc99/LICENSE), Copyright (c) 2024 HamoCorp).
 
 Licensed under the [MIT License](https://github.com/MarkN2000/ClassicLegacyUI/blob/main/LICENSE).
+
+[homepage](https://markn2000.com/)
